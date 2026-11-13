@@ -28,6 +28,11 @@ def check_on_sale(df: pd.DataFrame, book_id: str) -> None:
         raise BookError(f"판매 상태가 '{status}'로 되어 있어 처리할 수 없습니다. books.csv를 확인하세요.")
 
 
+def done_message(book_id: str, title: str) -> str:
+    """처리한 도서를 붙인 완료 메시지. 처리 뒤 선택 상자가 다른 도서로 바뀌어도 무엇을 처리했는지 알 수 있다."""
+    return f"{MSG_DONE} ({book_id} {title})"
+
+
 def mark_sold(df: pd.DataFrame, book_id: str) -> pd.DataFrame:
     """SF-07: 저장 직전에 다시 읽은 표로 상태를 확인한 뒤 판매완료로 바꾼 새 표를 돌려준다.
     판매완료를 판매중으로 되돌리는 기능은 두지 않는다(개발팀 제안)."""
