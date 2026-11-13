@@ -15,7 +15,8 @@ MSG_REQUIRED = "필수 항목을 모두 입력해 주세요."
 MSG_PRICE = "판매 가격은 0보다 커야 합니다."
 MSG_FEE = "수수료율은 1~99 사이 정수여야 합니다."
 MSG_DUPLICATE = "이미 등록된 도서 ID입니다."
-# SF-01의 ID 형식 검사 (화면설계서 메시지 목록에는 없어 개발팀이 정한 문구)
+# 화면설계서 메시지 목록에는 없어 개발팀이 더한 문구 (SF-01의 ID 형식 검사, Issue #5의 판매 가격 정수 검사)
+MSG_PRICE_INT = "판매 가격은 원 단위 정수로 입력해 주세요."
 MSG_BOOK_ID = "도서 ID는 B와 숫자 3자리로 입력해 주세요. (예: B013)"
 MSG_CONSIGNOR_ID = "위탁자 ID는 C와 숫자 3자리로 입력해 주세요. (예: C001)"
 
@@ -30,7 +31,9 @@ def check_book(book_id, title, consignor_id, price, fee_rate) -> dict:
         raise BookError(MSG_REQUIRED)
 
     price_num = to_int(price)
-    if price_num is None or price_num <= 0:
+    if price_num is None:  # 8000.5처럼 원 단위 정수가 아니면 잘라서 저장하지 않고 알린다
+        raise BookError(MSG_PRICE if _is_not_positive(price) else MSG_PRICE_INT)
+    if price_num <= 0:
         raise BookError(MSG_PRICE)
 
     fee_num = to_int(fee_rate)
@@ -44,6 +47,13 @@ def check_book(book_id, title, consignor_id, price, fee_rate) -> dict:
 
     return {"book_id": book_id, "title": title, "consignor_id": consignor_id,
             "price": price_num, "fee_rate": fee_num}
+
+
+def _is_not_positive(value) -> bool:
+    try:
+        return float(str(value).replace(",", "")) <= 0
+    except ValueError:
+        return False
 
 
 def add_book(df: pd.DataFrame, book: dict) -> pd.DataFrame:
