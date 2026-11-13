@@ -23,7 +23,7 @@ def test_위탁자_ID로_찾는다(books):
 def test_없는_도서_ID는_찾은_도서_없음(books):
     found, terms = find_books(books, "B999 있어?")
     assert terms == [("book_id", "B999")] and found.empty
-    assert "결과: 등록된 도서가 없습니다." in describe(found, terms)
+    assert "- 등록된 도서가 없습니다." in describe(found, terms)
 
 
 def test_도서명_단어는_긴_것부터_찾는다(books):
@@ -40,7 +40,7 @@ def test_전체_제목과_제목_단어를_함께_찾는다(books):
 def test_검색할_말이_없으면_검색하지_않는다(books):
     found, terms = find_books(books, "수수료율은 몇까지 돼?")
     assert terms == [] and found.empty
-    assert "검색: 하지 않음" in describe(found, terms)
+    assert describe(found, terms) == ""  # 검색하지 않은 질문은 질문만 보낸다
 
 
 def test_데이터는_읽기만_한다(books):
@@ -52,8 +52,8 @@ def test_데이터는_읽기만_한다(books):
 def test_모델에는_앱이_찾은_값만_넘긴다(books):
     found, terms = find_books(books, "B002 팔렸어?")
     text = describe(found, terms)
-    assert text.splitlines() == ["[이번 질문으로 앱이 찾은 도서]", "검색: 도서 ID 'B002'",
-                                 "판매중 0권: 없음", "판매완료 1권: B002 데이터 구조(위탁자 C001, 12,000원)"]
+    assert text.splitlines() == ["앱이 찾은 도서 (검색: 도서 ID 'B002')",
+                                 "- 판매중 0권: 없음", "- 판매완료 1권: B002 데이터 구조(위탁자 C001, 12,000원)"]
 
 
 def test_판매_상태별로_나눠_넘긴다(books):  # Issue #6
@@ -69,7 +69,7 @@ def test_최대_권수를_넘으면_앞부분만_넘긴다():
     found, terms = find_books(many, "파이썬 입문 있어?")
     text = describe(found, terms)
     assert len(found) == 15
-    assert f"(찾은 도서 15권 중 앞의 {MAX_BOOKS}권만 적음)" in text
+    assert f"- 찾은 도서 15권 중 앞의 {MAX_BOOKS}권만 적음" in text
     assert text.count("(위탁자 C001") == MAX_BOOKS
 
 
