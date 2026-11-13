@@ -2,7 +2,7 @@
 import streamlit as st
 
 from core.common import BookError
-from core.sale import MSG_CONFIRM, MSG_DONE, MSG_NONE_ON_SALE, books_on_sale, check_on_sale, mark_sold
+from core.sale import MSG_CONFIRM, MSG_NONE_ON_SALE, books_on_sale, check_on_sale, done_message, mark_sold
 from core.storage import save_books
 from ui import flash, load_data, show_books, show_flash
 
@@ -46,12 +46,14 @@ if pending is not None:
         cancel = c2.button("취소", width="stretch")
     if ok:
         st.session_state.pop("sale_pending")
+        fresh = load_data()  # 저장 직전에 다시 읽어 판매중인지 확인한다
         try:
-            save_books(mark_sold(load_data(), pending))  # 저장 직전에 다시 읽어 판매중인지 확인한다
+            save_books(mark_sold(fresh, pending))
         except BookError as exc:
             st.error(str(exc))  # ⑥ 오류 메시지
         else:
-            flash("sale", MSG_DONE)
+            title = fresh.loc[fresh["book_id"] == pending, "title"].iloc[0]
+            flash("sale", done_message(pending, title))
             st.session_state.pop("sale_pick", None)
             st.rerun()
     if cancel:
