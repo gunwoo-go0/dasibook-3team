@@ -51,26 +51,23 @@ def find_books(df: pd.DataFrame, question: str) -> tuple[pd.DataFrame, list[tupl
     return pd.concat(parts).drop_duplicates(subset="book_id"), terms
 
 
-FOUND_HEAD = "[이번 질문으로 앱이 찾은 도서]"
-
-
 def describe(found: pd.DataFrame, terms: list[tuple[str, str]]) -> str:
-    """모델에 넘길 검색 결과 글. 앱이 찾은 값만 판매 상태별로 묶어 짧게 적는다.
-    작은 모델도 '팔렸어?'에 바로 답할 수 있게 판매중·판매완료를 나눠 둔다(Issue #6)."""
+    """모델에 넘길 검색 결과 글. 앱이 찾은 값만 판매 상태별로 묶어 짧게 적는다(Issue #6).
+    검색 조건이 없는 질문(규칙 질문 등)은 빈 글을 돌려주고, 이때는 질문만 모델에 보낸다."""
     if not terms:
-        return f"{FOUND_HEAD}\n검색: 하지 않음 (질문에 도서 ID·위탁자 ID·도서명이 없음)"
+        return ""
     cond = ", ".join(f"{FIELD_NAMES[f]} '{k}'" for f, k in terms)
-    lines = [FOUND_HEAD, f"검색: {cond}"]
+    lines = [f"앱이 찾은 도서 (검색: {cond})"]
     if found.empty:
-        lines.append("결과: 등록된 도서가 없습니다.")
+        lines.append("- 등록된 도서가 없습니다.")
         return "\n".join(lines)
     shown = found.head(MAX_BOOKS)
     if len(found) > MAX_BOOKS:
-        lines.append(f"(찾은 도서 {len(found)}권 중 앞의 {MAX_BOOKS}권만 적음)")
+        lines.append(f"- 찾은 도서 {len(found)}권 중 앞의 {MAX_BOOKS}권만 적음")
     for status in [ON_SALE, SOLD] + sorted(set(shown["status"]) - {ON_SALE, SOLD}):
         rows = shown[shown["status"] == status]
         books = ", ".join(_book_text(r) for _, r in rows.iterrows()) or "없음"
-        lines.append(f"{status} {len(rows)}권: {books}")
+        lines.append(f"- {status} {len(rows)}권: {books}")
     return "\n".join(lines)
 
 
