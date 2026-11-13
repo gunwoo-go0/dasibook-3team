@@ -1,7 +1,7 @@
 """SF-12 AI 검색 도우미의 검색 부분: 질문 → 기존 검색 실행 → 모델에 넘길 글 (AI-01)."""
 import pandas as pd
 
-from core.ai_search import MAX_BOOKS, describe, find_books, find_terms
+from core.ai_search import MAX_BOOKS, MSG_NOT_SEARCHED, MSG_NOTHING_FOUND, describe, find_books, find_terms, found_note
 
 
 def ids(df):
@@ -68,3 +68,9 @@ def test_최대_권수를_넘으면_앞부분만_넘긴다():
 
 def test_ID_형식이_아닌_글자는_ID로_보지_않는다(books):
     assert find_terms(books, "AB001이나 B0011, C01은?") == []
+
+
+def test_검색을_안_한_경우와_찾은_도서가_없는_경우를_구별한다():  # Issue #4
+    assert found_note(searched=False, total=0) == MSG_NOT_SEARCHED
+    assert found_note(searched=True, total=0) == MSG_NOTHING_FOUND
+    assert found_note(searched=True, total=2) is None
