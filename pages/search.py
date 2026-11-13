@@ -42,6 +42,9 @@ else:
 # ---------------------------------------------------------------------------
 # AI 검색 도우미 (SF-12, 추가): 질문으로 기존 검색을 실행하고, 찾은 도서만 근거로 답한다.
 # ---------------------------------------------------------------------------
+CHAT_HEIGHT = 270  # 대화 영역 높이(px)
+
+
 def show_found(books: list[dict], total: int) -> None:
     """앱이 찾은 도서를 표로 보여 준다(모델이 만든 값이 아니다)."""
     if not books:
@@ -61,14 +64,18 @@ with st.container(border=True):
     if reset.button("대화 초기화", width="stretch"):
         st.session_state.ai_messages = []
     st.caption("검색으로 찾은 도서와 업무 규칙만 근거로 답합니다 · 수업용 가상 데이터")
-    chat = st.container()
+    # 대화 영역 높이를 고정해 그 안에서 스크롤한다. 대화가 길어져도 입력칸이 화면 아래로 밀려나지 않는다.
+    chat = st.container(height=CHAT_HEIGHT)
+    if not st.session_state.ai_messages and not st.session_state.get("ai_question"):
+        chat.caption("질문을 입력하면 여기에 답변과 찾은 도서가 나옵니다.")
     for message in st.session_state.ai_messages:
         with chat.chat_message(message["role"]):
             st.markdown(message["content"])
             if message["role"] == "assistant":
                 show_found(message["books"], message["total"])
-    question = st.chat_input("질문을 입력하세요 (예: 파이썬 입문 팔렸어? / C001 책 보여 줘)", max_chars=MAX_QUESTION)
-notice = st.container()
+    notice = st.container()  # 오류 안내는 입력칸 바로 위에 띄운다
+    question = st.chat_input("질문을 입력하세요 (예: 파이썬 입문 팔렸어? / C001 책 보여 줘)", max_chars=MAX_QUESTION,
+                             key="ai_question")
 
 if question:
     with chat.chat_message("user"):
