@@ -1,0 +1,20 @@
+// 다시책방 ERD: 실제 파일은 books.csv 하나. 위탁자는 consignor_id로만 존재하는 논리 개체.
+digraph ERD {
+  graph [rankdir=LR, fontname="Noto Sans CJK KR", pad=0.3, nodesep=0.6, ranksep=1.4, bgcolor="white"];
+  node  [shape=none, fontname="Noto Sans CJK KR", fontsize=12];
+  edge  [fontname="Noto Sans CJK KR", fontsize=11, color="#0a21a0", fontcolor="#0a21a0", dir=both, arrowtail=teetee, arrowhead=crowodot, penwidth=1.4];
+  consignor [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#0a21a0">
+    <TR><TD BGCOLOR="#e1e5f5"><B>위탁자 CONSIGNOR</B><BR/><FONT POINT-SIZE="10">(논리 개체, 별도 파일 없음)</FONT></TD></TR>
+    <TR><TD ALIGN="LEFT">PK  consignor_id  위탁자 ID (예: C001)</TD></TR>
+  </TABLE>>];
+  book [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" COLOR="#0a21a0">
+    <TR><TD BGCOLOR="#e1e5f5" COLSPAN="2"><B>도서 BOOK</B>  <FONT POINT-SIZE="10">data/books.csv</FONT></TD></TR>
+    <TR><TD ALIGN="LEFT">PK  book_id</TD><TD ALIGN="LEFT">도서 ID, B+숫자 3자리(예: B001), 중복 불가</TD></TR>
+    <TR><TD ALIGN="LEFT">title</TD><TD ALIGN="LEFT">도서명, 빈칸 불가</TD></TR>
+    <TR><TD ALIGN="LEFT">FK  consignor_id</TD><TD ALIGN="LEFT">위탁자 ID, C+숫자 3자리</TD></TR>
+    <TR><TD ALIGN="LEFT">price</TD><TD ALIGN="LEFT">판매 가격, 원 단위 정수 &gt; 0</TD></TR>
+    <TR><TD ALIGN="LEFT">status</TD><TD ALIGN="LEFT">판매 상태, 판매중 / 판매완료</TD></TR>
+    <TR><TD ALIGN="LEFT">fee_rate</TD><TD ALIGN="LEFT">수수료율, 1–99 정수(%)</TD></TR>
+  </TABLE>>];
+  consignor -> book [label="  위탁한다 (1 : 0..N)  "];
+}

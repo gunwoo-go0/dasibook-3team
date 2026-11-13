@@ -1,0 +1,33 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontFamily':'Noto Sans CJK KR', 'fontSize':'15px', 'git0':'#0a21a0', 'git1':'#2f6f4f', 'git2':'#3d6fd6', 'git3':'#7a5cc4', 'git4':'#e8892b', 'git5':'#c2453a', 'git6':'#5f6b7a', 'gitBranchLabel0':'#ffffff', 'gitBranchLabel1':'#ffffff', 'gitBranchLabel2':'#ffffff', 'gitBranchLabel3':'#ffffff', 'gitBranchLabel4':'#ffffff', 'gitBranchLabel5':'#ffffff', 'gitBranchLabel6':'#ffffff', 'commitLabelFontSize':'13px'}, 'gitGraph': {'showCommitLabel': true, 'rotateCommitLabel': true, 'mainBranchName': 'main'}}}%%
+gitGraph
+  commit id: "init: 폴더 구조"
+  branch feature/data-core
+  commit id: "SF-11 저장·불러오기"
+  commit id: "예시 books.csv"
+  checkout main
+  merge feature/data-core id: "PR 데이터 공통"
+  branch feature/register
+  commit id: "SF-01 입력 검사"
+  commit id: "SF-02 등록 저장"
+  checkout main
+  branch feature/search
+  commit id: "SF-03·04 검색"
+  commit id: "SF-05 검색 기준"
+  checkout main
+  merge feature/register id: "PR SCR-01"
+  merge feature/search id: "PR SCR-02"
+  branch feature/ai-search
+  commit id: "llm.py 연결"
+  commit id: "SF-12 AI 검색"
+  checkout main
+  branch feature/sale-settle
+  commit id: "SF-06·07 판매"
+  commit id: "SF-08~10 정산"
+  checkout main
+  merge feature/sale-settle id: "PR SCR-03·04"
+  merge feature/ai-search id: "PR AI 검색"
+  branch fix/issue-1
+  commit id: "QA 수정 #1"
+  checkout main
+  merge fix/issue-1 id: "Closes #1"
+  commit id: "v1.0 제출" tag: "v1.0"
