@@ -1,0 +1,46 @@
+// 다시책방 DFD (Yourdon/DeMarco 기호: 원=프로세스, 위아래 선=자료 저장소, 사각형=외부 개체). 주황색은 추가한 AI 검색 도우미.
+digraph DFD {
+  graph [rankdir=LR, fontname="Noto Sans CJK KR", nodesep=0.5, ranksep=1.0, pad=0.3, bgcolor="white"];
+  node  [fontname="Noto Sans CJK KR", fontsize=13, color="#0a21a0", fontcolor="#0a21a0"];
+  edge  [fontname="Noto Sans CJK KR", fontsize=10.5, color="#0a21a0", fontcolor="#333333", arrowsize=0.7];
+
+  staff  [label="직원", shape=box, style=filled, fillcolor="#e1e5f5", width=1.1, height=0.6, penwidth=1.6];
+  ollama [label="Ollama 서버\nQwen3.5 2B", shape=box, style=filled, fillcolor="#fff4e5", color="#e8892b", fontcolor="#7a4a00", penwidth=1.6];
+
+  p1 [label="1.0\n도서 등록", shape=circle, width=1.25, fixedsize=true, style=filled, fillcolor="#f3f4f9", penwidth=1.6];
+  p2 [label="2.0\n도서 검색", shape=circle, width=1.25, fixedsize=true, style=filled, fillcolor="#f3f4f9", penwidth=1.6];
+  p21 [label="2.1\nAI 검색\n도우미", shape=circle, width=1.25, fixedsize=true, style=filled, fillcolor="#fff4e5", color="#e8892b", fontcolor="#7a4a00", penwidth=1.8];
+  p3 [label="3.0\n판매 상태\n변경", shape=circle, width=1.25, fixedsize=true, style=filled, fillcolor="#f3f4f9", penwidth=1.6];
+  p4 [label="4.0\n정산 계산", shape=circle, width=1.25, fixedsize=true, style=filled, fillcolor="#f3f4f9", penwidth=1.6];
+
+  d1 [shape=none, label=<<TABLE BORDER="0" CELLBORDER="1" CELLPADDING="7"><TR><TD SIDES="TB">D1  books.csv</TD></TR></TABLE>>];
+  d2 [shape=none, fontcolor="#7a4a00", label=<<TABLE BORDER="0" CELLBORDER="1" CELLPADDING="7" COLOR="#e8892b"><TR><TD SIDES="TB">D2  업무 규칙 (service_rules.md)</TD></TR></TABLE>>];
+  d3 [shape=none, fontcolor="#7a4a00", label=<<TABLE BORDER="0" CELLBORDER="1" CELLPADDING="7" COLOR="#e8892b"><TR><TD SIDES="TB">D3  대화 이력 (세션)</TD></TR></TABLE>>];
+
+  staff -> p1 [label="도서 정보 5개"];
+  p1 -> d1 [label="검증된 신규 도서\n(판매중)"];
+  p1 -> staff [label="등록 결과·오류 안내", style=dashed];
+
+  staff -> p2 [label="검색 기준·검색어"];
+  d1 -> p2 [label="도서 목록"];
+  p2 -> staff [label="검색 결과·안내", style=dashed];
+
+  staff -> p3 [label="고른 도서·확인"];
+  d1 -> p3 [label="현재 판매 상태"];
+  p3 -> d1 [label="판매완료 상태"];
+  p3 -> staff [label="처리 결과·안내", style=dashed];
+
+  staff -> p4 [label="위탁자 ID"];
+  d1 -> p4 [label="판매완료 도서\n가격·수수료율"];
+  p4 -> staff [label="권별 정산액·총정산액", style=dashed];
+
+  staff -> p21 [label="질문", color="#e8892b"];
+  p21 -> p2 [label="검색 조건\n(도서 ID·위탁자 ID·도서명 단어)", color="#e8892b"];
+  p2 -> p21 [label="찾은 도서", color="#e8892b"];
+  d2 -> p21 [label="업무 규칙", color="#e8892b"];
+  d3 -> p21 [label="최근 대화 6개", color="#e8892b"];
+  p21 -> d3 [label="질문과 답변", color="#e8892b"];
+  p21 -> ollama [label="규칙+찾은 도서\n+대화+질문", color="#e8892b"];
+  ollama -> p21 [label="생성 답변", color="#e8892b"];
+  p21 -> staff [label="답변·찾은 도서 표·오류 안내", style=dashed, color="#e8892b"];
+}
