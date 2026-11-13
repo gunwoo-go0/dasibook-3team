@@ -8,7 +8,7 @@ import re
 
 import pandas as pd
 
-from core.common import to_int, won
+from core.common import ON_SALE, SOLD, to_int, won
 from core.search import search_books
 
 BOOK_ID_IN_TEXT = re.compile(r"(?<![A-Za-z0-9])[Bb]\d{3}(?!\d)")
@@ -51,25 +51,33 @@ def find_books(df: pd.DataFrame, question: str) -> tuple[pd.DataFrame, list[tupl
     return pd.concat(parts).drop_duplicates(subset="book_id"), terms
 
 
+FOUND_HEAD = "[이번 질문으로 앱이 찾은 도서]"
+
+
 def describe(found: pd.DataFrame, terms: list[tuple[str, str]]) -> str:
-    """모델에 넘길 검색 결과 글. 앱이 찾은 값만 적는다."""
+    """모델에 넘길 검색 결과 글. 앱이 찾은 값만 판매 상태별로 묶어 짧게 적는다.
+    작은 모델도 '팔렸어?'에 바로 답할 수 있게 판매중·판매완료를 나눠 둔다(Issue #6)."""
     if not terms:
-        return ("검색 조건: 없음 (질문에서 도서 ID, 위탁자 ID, 도서명을 찾지 못해 검색하지 않았습니다)\n"
-                "찾은 도서: 없음")
+        return f"{FOUND_HEAD}\n검색: 하지 않음 (질문에 도서 ID·위탁자 ID·도서명이 없음)"
     cond = ", ".join(f"{FIELD_NAMES[f]} '{k}'" for f, k in terms)
-    lines = [f"검색 조건: {cond}"]
+    lines = [FOUND_HEAD, f"검색: {cond}"]
     if found.empty:
-        lines.append("찾은 도서: 없음 (검색 결과가 없습니다)")
+        lines.append("결과: 등록된 도서가 없습니다.")
         return "\n".join(lines)
-    head = f"찾은 도서 {len(found)}권"
+    shown = found.head(MAX_BOOKS)
     if len(found) > MAX_BOOKS:
-        head += f" (앞의 {MAX_BOOKS}권만 적음)"
-    lines.append(head + ":")
-    for _, r in found.head(MAX_BOOKS).iterrows():
-        price = to_int(r["price"])
-        lines.append(f"- 도서 ID {r['book_id']} | 도서명 {r['title']} | 위탁자 ID {r['consignor_id']} | "
-                     f"판매 가격 {won(price) if price is not None else r['price']} | 판매 상태 {r['status']}")
+        lines.append(f"(찾은 도서 {len(found)}권 중 앞의 {MAX_BOOKS}권만 적음)")
+    for status in [ON_SALE, SOLD] + sorted(set(shown["status"]) - {ON_SALE, SOLD}):
+        rows = shown[shown["status"] == status]
+        books = ", ".join(_book_text(r) for _, r in rows.iterrows()) or "없음"
+        lines.append(f"{status} {len(rows)}권: {books}")
     return "\n".join(lines)
+
+
+def _book_text(r) -> str:
+    price = to_int(r["price"])
+    price_text = won(price) if price is not None else r["price"]
+    return f"{r['book_id']} {r['title']}(위탁자 {r['consignor_id']}, {price_text})"
 
 
 def found_note(searched: bool, total: int) -> str | None:
