@@ -88,7 +88,7 @@ ollama pull qwen3.5:2b-q4_K_M
 
 ```text
 app.py              시작 파일: 사이드바 메뉴 4개, 첫 화면은 도서 검색
-pages/              화면 4개 (register, search + AI 검색 도우미, sale, settle)
+app_pages/          화면 4개 (register, search + AI 검색 도우미, sale, settle)
 core/               화면과 분리한 업무 로직 (저장, 등록, 검색, 판매, 정산, AI 검색 연동)
 llm.py              Ollama 연결과 답변 생성
 smoke_test.py       모델 연결 확인
