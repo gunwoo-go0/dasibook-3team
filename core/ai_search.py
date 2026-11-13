@@ -16,6 +16,8 @@ CONSIGNOR_ID_IN_TEXT = re.compile(r"(?<![A-Za-z0-9])[Cc]\d{3}(?!\d)")
 MAX_BOOKS = 10  # 모델에 넘기고 화면에 보여 줄 최대 권수
 MIN_WORD = 2    # 도서명 단어로 찾을 때 최소 글자 수
 FIELD_NAMES = {"book_id": "도서 ID", "consignor_id": "위탁자 ID", "title": "도서명"}
+MSG_NOT_SEARCHED = "질문에 도서 ID·위탁자 ID·도서명이 없어 도서를 검색하지 않았습니다."
+MSG_NOTHING_FOUND = "찾은 도서 없음"
 
 
 def find_terms(df: pd.DataFrame, question: str) -> list[tuple[str, str]]:
@@ -68,3 +70,12 @@ def describe(found: pd.DataFrame, terms: list[tuple[str, str]]) -> str:
         lines.append(f"- 도서 ID {r['book_id']} | 도서명 {r['title']} | 위탁자 ID {r['consignor_id']} | "
                      f"판매 가격 {won(price) if price is not None else r['price']} | 판매 상태 {r['status']}")
     return "\n".join(lines)
+
+
+def found_note(searched: bool, total: int) -> str | None:
+    """찾은 도서 표 대신 보여 줄 안내. 검색을 안 한 경우와 검색했지만 없는 경우를 구별한다."""
+    if not searched:
+        return MSG_NOT_SEARCHED
+    if total == 0:
+        return MSG_NOTHING_FOUND
+    return None

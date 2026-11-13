@@ -6,7 +6,7 @@
 import pandas as pd
 import streamlit as st
 
-from core.ai_search import MAX_BOOKS, describe, find_books
+from core.ai_search import MAX_BOOKS, describe, find_books, found_note
 from core.search import MSG_NO_BOOKS, MSG_NO_RESULT, SEARCH_FIELDS, search_books
 from llm import MAX_QUESTION, ChatError, get_reply
 from ui import load_data, show_books
@@ -45,10 +45,11 @@ else:
 CHAT_HEIGHT = 270  # 대화 영역 높이(px)
 
 
-def show_found(books: list[dict], total: int) -> None:
+def show_found(books: list[dict], total: int, searched: bool = True) -> None:
     """앱이 찾은 도서를 표로 보여 준다(모델이 만든 값이 아니다)."""
-    if not books:
-        st.caption("찾은 도서 없음")
+    note = found_note(searched, total)
+    if note:
+        st.caption(note)
         return
     more = f" (앞의 {MAX_BOOKS}권만 표시)" if total > MAX_BOOKS else ""
     st.markdown(f"**찾은 도서 {total}권**{more}")
@@ -72,7 +73,7 @@ with st.container(border=True):
         with chat.chat_message(message["role"]):
             st.markdown(message["content"])
             if message["role"] == "assistant":
-                show_found(message["books"], message["total"])
+                show_found(message["books"], message["total"], message.get("searched", True))
     notice = st.container()  # 오류 안내는 입력칸 바로 위에 띄운다
     question = st.chat_input("질문을 입력하세요 (예: 파이썬 입문 팔렸어? / C001 책 보여 줘)", max_chars=MAX_QUESTION,
                              key="ai_question")
@@ -91,8 +92,8 @@ if question:
         books = found.head(MAX_BOOKS).to_dict("records")
         with chat.chat_message("assistant"):
             st.markdown(answer)
-            show_found(books, len(found))
+            show_found(books, len(found), bool(terms))
         st.session_state.ai_messages.extend([
             {"role": "user", "content": question},
-            {"role": "assistant", "content": answer, "books": books, "total": len(found)},
+            {"role": "assistant", "content": answer, "books": books, "total": len(found), "searched": bool(terms)},
         ])
