@@ -40,12 +40,13 @@ def show_books(df: pd.DataFrame, columns=BOOK_COLUMNS) -> None:
     st.dataframe(book_view(df, columns), hide_index=True)
 
 
-def flash(key: str, text: str) -> None:
-    """다음 화면 갱신 때 한 번 보여 줄 완료 메시지를 남긴다."""
-    st.session_state[f"flash_{key}"] = text
+def flash(key: str, text: str, kind: str = "success") -> None:
+    """다음에 show_flash를 부를 때 한 번 보여 줄 메시지를 남긴다. kind는 success 또는 error."""
+    st.session_state[f"flash_{key}"] = (kind, text)
 
 
 def show_flash(key: str) -> None:
-    text = st.session_state.pop(f"flash_{key}", None)
-    if text:
-        st.success(text)
+    item = st.session_state.pop(f"flash_{key}", None)
+    if item:
+        kind, text = item
+        (st.error if kind == "error" else st.success)(text)

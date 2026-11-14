@@ -6,7 +6,7 @@
 import pandas as pd
 import streamlit as st
 
-from core.ai_search import MAX_BOOKS, describe, find_books
+from core.ai_search import MAX_BOOKS, describe, find_books, found_note
 from core.search import MSG_NO_BOOKS, MSG_NO_RESULT, SEARCH_FIELDS, search_books
 from llm import MAX_QUESTION, ChatError, get_reply
 from ui import load_data, show_books
@@ -42,10 +42,14 @@ else:
 # ---------------------------------------------------------------------------
 # AI 검색 도우미 (SF-12, 추가): 질문으로 기존 검색을 실행하고, 찾은 도서만 근거로 답한다.
 # ---------------------------------------------------------------------------
-def show_found(books: list[dict], total: int) -> None:
+CHAT_HEIGHT = 270  # 대화 영역 높이(px)
+
+
+def show_found(books: list[dict], total: int, searched: bool = True) -> None:
     """앱이 찾은 도서를 표로 보여 준다(모델이 만든 값이 아니다)."""
-    if not books:
-        st.caption("찾은 도서 없음")
+    note = found_note(searched, total)
+    if note:
+        st.caption(note)
         return
     more = f" (앞의 {MAX_BOOKS}권만 표시)" if total > MAX_BOOKS else ""
     st.markdown(f"**찾은 도서 {total}권**{more}")
@@ -61,14 +65,18 @@ with st.container(border=True):
     if reset.button("대화 초기화", width="stretch"):
         st.session_state.ai_messages = []
     st.caption("검색으로 찾은 도서와 업무 규칙만 근거로 답합니다 · 수업용 가상 데이터")
-    chat = st.container()
+    # 대화 영역 높이를 고정해 그 안에서 스크롤한다. 대화가 길어져도 입력칸이 화면 아래로 밀려나지 않는다.
+    chat = st.container(height=CHAT_HEIGHT)
+    if not st.session_state.ai_messages and not st.session_state.get("ai_question"):
+        chat.caption("질문을 입력하면 여기에 답변과 찾은 도서가 나옵니다.")
     for message in st.session_state.ai_messages:
         with chat.chat_message(message["role"]):
             st.markdown(message["content"])
             if message["role"] == "assistant":
-                show_found(message["books"], message["total"])
-    question = st.chat_input("질문을 입력하세요 (예: 파이썬 입문 팔렸어? / C001 책 보여 줘)", max_chars=MAX_QUESTION)
-notice = st.container()
+                show_found(message["books"], message["total"], message.get("searched", True))
+    notice = st.container()  # 오류 안내는 입력칸 바로 위에 띄운다
+    question = st.chat_input("질문을 입력하세요 (예: 파이썬 입문 팔렸어? / C001 책 보여 줘)", max_chars=MAX_QUESTION,
+                             key="ai_question")
 
 if question:
     with chat.chat_message("user"):
@@ -84,8 +92,8 @@ if question:
         books = found.head(MAX_BOOKS).to_dict("records")
         with chat.chat_message("assistant"):
             st.markdown(answer)
-            show_found(books, len(found))
+            show_found(books, len(found), bool(terms))
         st.session_state.ai_messages.extend([
             {"role": "user", "content": question},
-            {"role": "assistant", "content": answer, "books": books, "total": len(found)},
+            {"role": "assistant", "content": answer, "books": books, "total": len(found), "searched": bool(terms)},
         ])

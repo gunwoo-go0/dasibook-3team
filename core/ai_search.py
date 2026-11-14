@@ -8,7 +8,7 @@ import re
 
 import pandas as pd
 
-from core.common import to_int, won
+from core.common import ON_SALE, SOLD, to_int, won
 from core.search import search_books
 
 BOOK_ID_IN_TEXT = re.compile(r"(?<![A-Za-z0-9])[Bb]\d{3}(?!\d)")
@@ -16,6 +16,8 @@ CONSIGNOR_ID_IN_TEXT = re.compile(r"(?<![A-Za-z0-9])[Cc]\d{3}(?!\d)")
 MAX_BOOKS = 10  # 모델에 넘기고 화면에 보여 줄 최대 권수
 MIN_WORD = 2    # 도서명 단어로 찾을 때 최소 글자 수
 FIELD_NAMES = {"book_id": "도서 ID", "consignor_id": "위탁자 ID", "title": "도서명"}
+MSG_NOT_SEARCHED = "질문에 도서 ID·위탁자 ID·도서명이 없어 도서를 검색하지 않았습니다."
+MSG_NOTHING_FOUND = "찾은 도서 없음"
 
 
 def find_terms(df: pd.DataFrame, question: str) -> list[tuple[str, str]]:
@@ -50,21 +52,35 @@ def find_books(df: pd.DataFrame, question: str) -> tuple[pd.DataFrame, list[tupl
 
 
 def describe(found: pd.DataFrame, terms: list[tuple[str, str]]) -> str:
-    """모델에 넘길 검색 결과 글. 앱이 찾은 값만 적는다."""
+    """모델에 넘길 검색 결과 글. 앱이 찾은 값만 판매 상태별로 묶어 짧게 적는다(Issue #6).
+    검색 조건이 없는 질문(규칙 질문 등)은 빈 글을 돌려주고, 이때는 질문만 모델에 보낸다."""
     if not terms:
-        return ("검색 조건: 없음 (질문에서 도서 ID, 위탁자 ID, 도서명을 찾지 못해 검색하지 않았습니다)\n"
-                "찾은 도서: 없음")
+        return ""
     cond = ", ".join(f"{FIELD_NAMES[f]} '{k}'" for f, k in terms)
-    lines = [f"검색 조건: {cond}"]
+    lines = [f"앱이 찾은 도서 (검색: {cond})"]
     if found.empty:
-        lines.append("찾은 도서: 없음 (검색 결과가 없습니다)")
+        lines.append("- 등록된 도서가 없습니다.")
         return "\n".join(lines)
-    head = f"찾은 도서 {len(found)}권"
+    shown = found.head(MAX_BOOKS)
     if len(found) > MAX_BOOKS:
-        head += f" (앞의 {MAX_BOOKS}권만 적음)"
-    lines.append(head + ":")
-    for _, r in found.head(MAX_BOOKS).iterrows():
-        price = to_int(r["price"])
-        lines.append(f"- 도서 ID {r['book_id']} | 도서명 {r['title']} | 위탁자 ID {r['consignor_id']} | "
-                     f"판매 가격 {won(price) if price is not None else r['price']} | 판매 상태 {r['status']}")
+        lines.append(f"- 찾은 도서 {len(found)}권 중 앞의 {MAX_BOOKS}권만 적음")
+    for status in [ON_SALE, SOLD] + sorted(set(shown["status"]) - {ON_SALE, SOLD}):
+        rows = shown[shown["status"] == status]
+        books = ", ".join(_book_text(r) for _, r in rows.iterrows()) or "없음"
+        lines.append(f"- {status} {len(rows)}권: {books}")
     return "\n".join(lines)
+
+
+def _book_text(r) -> str:
+    price = to_int(r["price"])
+    price_text = won(price) if price is not None else r["price"]
+    return f"{r['book_id']} {r['title']}(위탁자 {r['consignor_id']}, {price_text})"
+
+
+def found_note(searched: bool, total: int) -> str | None:
+    """찾은 도서 표 대신 보여 줄 안내. 검색을 안 한 경우와 검색했지만 없는 경우를 구별한다."""
+    if not searched:
+        return MSG_NOT_SEARCHED
+    if total == 0:
+        return MSG_NOTHING_FOUND
+    return None

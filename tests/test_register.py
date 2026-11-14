@@ -2,7 +2,7 @@
 import pytest
 
 from core.common import ON_SALE, BookError
-from core.register import (MSG_BOOK_ID, MSG_CONSIGNOR_ID, MSG_DUPLICATE, MSG_FEE, MSG_PRICE, MSG_REQUIRED,
+from core.register import (MSG_BOOK_ID, MSG_CONSIGNOR_ID, MSG_DUPLICATE, MSG_FEE, MSG_PRICE, MSG_PRICE_INT, MSG_REQUIRED,
                            add_book, check_book, done_message)
 
 GOOD = dict(book_id="B013", title="자료구조 연습", consignor_id="C004", price=10000, fee_rate=10.0)
@@ -28,6 +28,17 @@ def test_빈_항목이_있으면_필수_안내(changes):
 def test_판매_가격은_0보다_커야_한다(price):
     with pytest.raises(BookError, match=MSG_PRICE):
         check(price=price)
+
+
+@pytest.mark.parametrize("price, message", [(8000.5, MSG_PRICE_INT), ("12,000.7", MSG_PRICE_INT),
+                                            (-5.5, MSG_PRICE), (10000.0, None)])
+def test_판매_가격은_원_단위_정수(price, message):  # Issue #5
+    if message is None:
+        assert check(price=price)["price"] == 10000
+    else:
+        with pytest.raises(BookError) as exc:
+            check(price=price)
+        assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("fee", [0, 100, 12.5, -5])

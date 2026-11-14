@@ -19,13 +19,14 @@ if st.session_state.pop("reg_clear", False):
 st.title("위탁 도서 등록")
 
 with st.form("register_form", border=False):
-    book_id = st.text_input("도서 ID \\*", placeholder="예: B013", key="reg_book_id")
-    title = st.text_input("도서명 \\*", placeholder="도서 제목", key="reg_title")
-    consignor_id = st.text_input("위탁자 ID \\*", placeholder="예: C001", key="reg_consignor")
-    price = st.number_input("판매 가격 \\* (원)", value=None, step=100, placeholder="0보다 큰 정수",
+    book_id = st.text_input("도서 ID *", placeholder="예: B013", key="reg_book_id")
+    title = st.text_input("도서명 *", placeholder="도서 제목", key="reg_title")
+    consignor_id = st.text_input("위탁자 ID *", placeholder="예: C001", key="reg_consignor")
+    # 가격과 수수료율은 8000.5, 12.5 같은 소수를 그대로 받아 검사에서 막도록 실수 칸으로 둔다.
+    # 정수 칸은 소수를 알림 없이 잘라 버린다(Issue #5).
+    price = st.number_input("판매 가격 * (원)", value=None, step=100.0, format="%.10g", placeholder="0보다 큰 정수",
                             key="reg_price")
-    # 12.5 같은 소수를 그대로 받아 검사에서 막도록 실수 칸으로 둔다(정수 칸은 12로 잘라 버린다).
-    fee_rate = st.number_input("수수료율 \\* (%)", value=None, step=1.0, format="%g", placeholder="1~99 정수",
+    fee_rate = st.number_input("수수료율 * (%)", value=None, step=1.0, format="%g", placeholder="1~99 정수",
                                key="reg_fee")
     st.text_input("판매 상태", value=ON_SALE, disabled=True)
     submitted = st.form_submit_button("등록", type="primary")
