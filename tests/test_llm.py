@@ -57,22 +57,29 @@ def server(monkeypatch):
     httpd.shutdown()
 
 
-def test_정상_답변과_모델에_보내는_내용(server):
-    history = [{"role": "user" if i % 2 == 0 else "assistant", "content": f"이전 {i}", "books": []}
-               for i in range(8)]
-    found = "검색 조건: 도서명 '파이썬 입문'\n찾은 도서 2권:\n- 도서 ID B001 | 도서명 파이썬 입문"
-    assert get_reply(history, "  파이썬 입문 팔렸어? ", found) == "B001 파이썬 입문은 판매중입니다."
+HISTORY = [{"role": "user" if i % 2 == 0 else "assistant", "content": f"이전 {i}", "books": []} for i in range(8)]
+
+
+def test_검색한_질문은_찾은_도서와_질문만_보낸다(server):  # Issue #6
+    found = "앱이 찾은 도서 (검색: 도서명 '파이썬 입문')\n- 판매중 1권: B001 파이썬 입문(위탁자 C001, 8,000원)"
+    assert get_reply(HISTORY, "  파이썬 입문 팔렸어? ", found) == "B001 파이썬 입문은 판매중입니다."
 
     sent = server.last_request
     assert sent["model"] == llm.MODEL and sent["stream"] is False and sent["think"] is False
     assert sent["options"] == {"temperature": 0, "num_ctx": 8192, "num_predict": 512}
     messages = sent["messages"]
+    assert [m["role"] for m in messages] == ["system", "user"]  # 앞 대화는 보내지 않는다
+    assert "업무 규칙:" in messages[0]["content"] and found not in messages[0]["content"]
+    assert messages[1]["content"] == f"{found}\n\n질문: 파이썬 입문 팔렸어?"
+
+
+def test_검색하지_않은_질문은_예제처럼_최근_대화와_보낸다(server):
+    get_reply(HISTORY, "수수료율은 몇까지 돼?")
+    messages = server.last_request["messages"]
     assert len(messages) == 1 + llm.MAX_HISTORY + 1  # 시스템 + 최근 대화 6개 + 질문
-    assert messages[0]["role"] == "system"
-    assert "업무 규칙:" in messages[0]["content"] and found in messages[0]["content"]
     assert [m["content"] for m in messages[1:-1]] == [f"이전 {i}" for i in range(2, 8)]
     assert all(set(m) == {"role", "content"} for m in messages)  # 표 같은 화면용 값은 보내지 않는다
-    assert messages[-1] == {"role": "user", "content": "파이썬 입문 팔렸어?"}
+    assert messages[-1] == {"role": "user", "content": "수수료율은 몇까지 돼?"}
 
 
 @pytest.mark.parametrize("question", ["", "   ", "가" * 301])

@@ -2,7 +2,7 @@
 import pytest
 
 from core.common import SOLD, BookError
-from core.sale import MSG_ALREADY, MSG_NOT_FOUND, books_on_sale, mark_sold
+from core.sale import MSG_ALREADY, MSG_NOT_FOUND, books_on_sale, done_message, mark_sold
 from core.search import search_books
 from core.settle import consignors, payout, settle
 
@@ -42,6 +42,10 @@ def test_판매완료_처리(books):
     new = mark_sold(books, "B003")
     assert new.loc[new["book_id"] == "B003", "status"].item() == SOLD
     assert books.loc[books["book_id"] == "B003", "status"].item() == "판매중"  # 원래 표는 그대로
+
+
+def test_완료_메시지에_처리한_도서가_나온다():  # Issue #1
+    assert done_message("B003", "알고리즘 기초") == "판매완료 처리되었습니다. (B003 알고리즘 기초)"
 
 
 @pytest.mark.parametrize("book_id, message", [("B002", MSG_ALREADY), ("B999", MSG_NOT_FOUND)])
