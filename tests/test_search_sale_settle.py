@@ -1,8 +1,9 @@
 """SF-03~SF-05 검색, SF-06·SF-07 판매 처리, SF-08~SF-10 정산 (F-02 ~ F-04)."""
+import pandas as pd
 import pytest
 
 from core.common import SOLD, BookError
-from core.sale import MSG_ALREADY, MSG_NOT_FOUND, books_on_sale, done_message, mark_sold
+from core.sale import MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, done_message, duplicate_ids, mark_sold
 from core.search import search_books
 from core.settle import consignors, payout, settle
 
@@ -53,6 +54,16 @@ def test_판매완료_도서와_없는_도서는_처리하지_않는다(books, b
     with pytest.raises(BookError) as exc:
         mark_sold(books, book_id)
     assert str(exc.value) == message
+
+
+def test_도서_ID가_중복되면_판매_처리하지_않는다(books):  # Issue #10
+    copy = books[books["book_id"] == "B001"].assign(title="중복 판매 검수본")
+    dup = pd.concat([books, copy], ignore_index=True)
+    assert duplicate_ids(dup) == ["B001"] and duplicate_ids(books) == []
+    with pytest.raises(BookError) as exc:
+        mark_sold(dup, "B001")
+    assert str(exc.value) == MSG_DUPLICATE.format(count=2)
+    assert list(dup.loc[dup["book_id"] == "B001", "status"]) == ["판매중", "판매중"]  # 두 줄 모두 그대로
 
 
 # --- 위탁자별 정산 ----------------------------------------------------------

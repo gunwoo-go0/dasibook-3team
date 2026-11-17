@@ -2,12 +2,15 @@
 import streamlit as st
 
 from core.common import BookError
-from core.sale import MSG_CONFIRM, MSG_NONE_ON_SALE, books_on_sale, check_on_sale, done_message, mark_sold
+from core.sale import (MSG_CONFIRM, MSG_DUPLICATE_LIST, MSG_NONE_ON_SALE, books_on_sale, check_on_sale,
+                       done_message, duplicate_ids, mark_sold)
 from core.storage import save_books
 from ui import flash, load_data, show_books, show_flash
 
 st.title("판매 상태 변경")
 df = load_data()
+if dups := duplicate_ids(df):  # Issue #10: 중복된 도서 ID는 처리 전에 미리 알린다
+    st.warning(MSG_DUPLICATE_LIST.format(ids=", ".join(dups)))
 on_sale = books_on_sale(df)
 pending = st.session_state.get("sale_pending")  # 확인을 기다리는 도서 ID
 
