@@ -1,4 +1,5 @@
 """공통 상수와 오류: 모든 기능이 같이 쓰는 값."""
+from decimal import Decimal
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,5 +40,9 @@ def to_int(value) -> int | None:
     return None
 
 
-def won(amount: int) -> str:
-    return f"{amount:,}원"
+def won(amount: int | Decimal) -> str:
+    """금액을 '12,345원'처럼 쓴다. 정산액처럼 원 미만이 있으면 소수점 아래도 보여 준다(Issue #14: '10,493.25원')."""
+    value = Decimal(amount)
+    if value == value.to_integral_value():
+        return f"{int(value):,}원"
+    return f"{value:,.2f}".rstrip("0") + "원"

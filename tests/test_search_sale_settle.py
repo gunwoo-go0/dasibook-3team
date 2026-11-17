@@ -1,11 +1,12 @@
 """SF-03~SF-05 검색, SF-06·SF-07 판매 처리, SF-08~SF-10 정산 (F-02 ~ F-04)."""
 import csv
 import io
+from decimal import Decimal
 
 import pandas as pd
 import pytest
 
-from core.common import SOLD, BookError
+from core.common import SOLD, BookError, won
 from core.sale import (MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, confirm_message, done_message,
                        duplicate_ids, mark_sold)
 from core.search import filter_status, search_books
@@ -82,10 +83,10 @@ def test_도서_ID가_중복되면_판매_처리하지_않는다(books):  # Issu
 
 
 # --- 위탁자별 정산 ----------------------------------------------------------
-def test_정산액은_원_미만을_버린다():
-    assert payout(9990, 15) == 8491  # 8,491.5원 → 8,491원
-    assert payout(12000, 15) == 10200
-    assert payout(12345, 15) == 10493  # 10,493.25원 → 10,493원 (Issue #14 예시)
+def test_정산액은_원_미만도_소수점까지_계산한다():  # Issue #14
+    assert payout(12345, 15) == Decimal("10493.25") and won(payout(12345, 15)) == "10,493.25원"
+    assert payout(9990, 15) == Decimal("8491.5") and won(payout(9990, 15)) == "8,491.5원"
+    assert payout(12000, 15) == 10200 and won(payout(12000, 15)) == "10,200원"  # 딱 떨어지면 소수점 없이
 
 
 def test_C001_정산(books):
@@ -96,8 +97,9 @@ def test_C001_정산(books):
 
 def test_C002_정산(books):
     result = settle(books, "C002")
-    assert [(i["book_id"], i["payout"]) for i in result.items] == [("B006", 9900), ("B008", 8491)]
-    assert result.total == 18391
+    assert [(i["book_id"], i["payout"]) for i in result.items] == [("B006", 9900), ("B008", Decimal("8491.5"))]
+    assert result.total == Decimal("18391.5") and won(result.total) == "18,391.5원"
+    assert settlement_csv(result).decode("utf-8-sig").splitlines()[-1] == '총정산액,판매완료 2권,,,"18,391.5원"'
 
 
 def test_정산_내역_CSV는_화면_표와_같고_총정산액이_붙는다(books):  # Issue #13
