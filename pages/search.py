@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from core.ai_search import MAX_BOOKS, describe, find_books, found_note
-from core.search import MSG_NO_BOOKS, MSG_NO_RESULT, SEARCH_FIELDS, search_books
+from core.search import ALL, MSG_NO_BOOKS, MSG_NO_RESULT, SEARCH_FIELDS, STATUS_FILTERS, filter_status, search_books
 from llm import MAX_QUESTION, ChatError, get_reply
 from ui import load_data, show_books
 
@@ -22,16 +22,20 @@ with st.form("search_form", border=False):
     if c3.form_submit_button("검색", type="primary", width="stretch"):
         st.session_state["search"] = (field, keyword.strip())
 
+# 판매 상태 필터 (Issue #11): 바꾸면 바로 결과에 적용된다. 기본값은 전체.
+status = st.radio("판매 상태", STATUS_FILTERS, horizontal=True, key="search_status")
+
 # ④ 결과 건수 ⑤ 결과 표 ⑥ 판매 상태 글자색 ⑦ 안내 메시지
 query = st.session_state.get("search")
 if df.empty:
     st.info(MSG_NO_BOOKS)
 else:
     if query is None:  # 처음 열었을 때는 전체 목록(SF-04)
-        result, label = df, f"전체 도서 {len(df)}권"
+        result = filter_status(df, status)
+        label = f"전체 도서 {len(result)}권" if status == ALL else f"{status} 도서 {len(result)}권"
     else:
-        result = search_books(df, query[1], SEARCH_FIELDS[query[0]])
-        label = f"검색 결과 {len(result)}건"
+        result = filter_status(search_books(df, query[1], SEARCH_FIELDS[query[0]]), status)
+        label = f"검색 결과 {len(result)}건" + ("" if status == ALL else f" ({status})")
     if result.empty:
         st.info(MSG_NO_RESULT)
     else:

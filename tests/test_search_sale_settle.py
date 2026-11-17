@@ -4,7 +4,7 @@ import pytest
 
 from core.common import SOLD, BookError
 from core.sale import MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, done_message, duplicate_ids, mark_sold
-from core.search import search_books
+from core.search import filter_status, search_books
 from core.settle import consignors, payout, settle
 
 
@@ -32,6 +32,13 @@ def test_결과가_없으면_빈_표(books):
 def test_검색_기준_위탁자_ID와_도서_ID(books):
     assert ids(search_books(books, "C002", "consignor_id")) == ["B004", "B006", "B008"]
     assert ids(search_books(books, "b003", "book_id")) == ["B003"]
+
+
+def test_검색_결과를_판매_상태로_거른다(books):  # Issue #11
+    found = search_books(books, "입문")
+    assert ids(filter_status(found)) == ["B001", "B004", "B005"]  # 기본값 전체
+    assert ids(filter_status(found, "판매중")) == ["B001", "B004"]
+    assert ids(filter_status(found, "판매완료")) == ["B005"]
 
 
 # --- 판매 상태 변경 ---------------------------------------------------------
