@@ -3,10 +3,11 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from core.common import SOLD, to_int
+from core.common import SOLD, to_int, won
 
 MSG_NO_SALES = "판매완료 내역이 없습니다."  # 화면설계서 SCR-04 메시지
 MSG_ROUNDING = "정산액 = 판매 가격 × (100 − 수수료율) ÷ 100, 원 미만은 버립니다."  # Issue #14
+TABLE_COLUMNS = ["도서 ID", "도서명", "판매 가격", "수수료율", "정산액"]
 
 
 @dataclass
@@ -46,3 +47,17 @@ def settle(df: pd.DataFrame, consignor_id: str) -> Settlement:
         result.items.append({"book_id": r["book_id"], "title": r["title"], "price": price,
                              "fee_rate": fee, "payout": payout(price, fee)})
     return result
+
+
+def settlement_table(result: Settlement) -> pd.DataFrame:
+    """SF-10 정산 내역 표. 화면과 CSV가 같은 값을 쓰도록 한 곳에서 만든다."""
+    return pd.DataFrame([[i["book_id"], i["title"], won(i["price"]), f"{i['fee_rate']}%", won(i["payout"])]
+                         for i in result.items], columns=TABLE_COLUMNS)
+
+
+def settlement_csv(result: Settlement) -> bytes:
+    """조회한 위탁자 한 명의 정산 내역 CSV (Issue #13). 화면 표 아래에 총정산액 줄을 붙인다.
+    엑셀로 열어도 한글이 깨지지 않게 books.csv와 같은 utf-8-sig로 만든다."""
+    total = pd.DataFrame([["총정산액", f"판매완료 {result.count}권", "", "", won(result.total)]], columns=TABLE_COLUMNS)
+    table = pd.concat([settlement_table(result), total], ignore_index=True)
+    return table.to_csv(index=False, lineterminator="\n").encode("utf-8-sig")

@@ -1,4 +1,7 @@
 """SF-03~SF-05 검색, SF-06·SF-07 판매 처리, SF-08~SF-10 정산 (F-02 ~ F-04)."""
+import csv
+import io
+
 import pandas as pd
 import pytest
 
@@ -6,7 +9,7 @@ from core.common import SOLD, BookError
 from core.sale import (MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, confirm_message, done_message,
                        duplicate_ids, mark_sold)
 from core.search import filter_status, search_books
-from core.settle import consignors, payout, settle
+from core.settle import consignors, payout, settle, settlement_csv, settlement_table
 
 
 def ids(df):
@@ -95,6 +98,18 @@ def test_C002_정산(books):
     result = settle(books, "C002")
     assert [(i["book_id"], i["payout"]) for i in result.items] == [("B006", 9900), ("B008", 8491)]
     assert result.total == 18391
+
+
+def test_정산_내역_CSV는_화면_표와_같고_총정산액이_붙는다(books):  # Issue #13
+    result = settle(books, "C001")
+    data = settlement_csv(result)
+    assert data.startswith(b"\xef\xbb\xbf")  # 엑셀에서 한글이 깨지지 않게 utf-8-sig
+    rows = list(csv.reader(io.StringIO(data.decode("utf-8-sig"))))
+    assert rows[0] == ["도서 ID", "도서명", "판매 가격", "수수료율", "정산액"]
+    assert rows[1:3] == settlement_table(result).values.tolist()  # 화면 표와 같은 값
+    assert rows[1:] == [["B002", "데이터 구조", "12,000원", "15%", "10,200원"],
+                        ["B005", "통계 입문", "7,000원", "20%", "5,600원"],
+                        ["총정산액", "판매완료 2권", "", "", "15,800원"]]
 
 
 def test_판매완료가_없으면_내역_없음(books):
