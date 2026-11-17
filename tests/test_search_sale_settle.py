@@ -3,7 +3,8 @@ import pandas as pd
 import pytest
 
 from core.common import SOLD, BookError
-from core.sale import MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, done_message, duplicate_ids, mark_sold
+from core.sale import (MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, confirm_message, done_message,
+                       duplicate_ids, mark_sold)
 from core.search import filter_status, search_books
 from core.settle import consignors, payout, settle
 
@@ -50,6 +51,10 @@ def test_판매완료_처리(books):
     new = mark_sold(books, "B003")
     assert new.loc[new["book_id"] == "B003", "status"].item() == SOLD
     assert books.loc[books["book_id"] == "B003", "status"].item() == "판매중"  # 원래 표는 그대로
+
+
+def test_확인_문구에_처리할_도서가_나온다():  # Issue #12
+    assert confirm_message("B001", "파이썬 입문") == "B001 · 파이썬 입문 도서를 판매완료로 변경할까요?"
 
 
 def test_완료_메시지에_처리한_도서가_나온다():  # Issue #1

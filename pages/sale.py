@@ -2,7 +2,7 @@
 import streamlit as st
 
 from core.common import BookError
-from core.sale import (MSG_CONFIRM, MSG_DUPLICATE_LIST, MSG_NONE_ON_SALE, books_on_sale, check_on_sale,
+from core.sale import (MSG_DUPLICATE_LIST, MSG_NONE_ON_SALE, books_on_sale, check_on_sale, confirm_message,
                        done_message, duplicate_ids, mark_sold)
 from core.storage import save_books
 from ui import flash, load_data, show_books, show_flash
@@ -43,7 +43,7 @@ if st.button("판매완료 처리", type="primary", disabled=pending is not None
 
 if pending is not None:
     with st.container(border=True):
-        st.markdown(f"**{MSG_CONFIRM}**")
+        st.markdown(f"**{confirm_message(pending, titles.get(pending, ''))}**")
         c1, c2, _ = st.columns([1, 1, 4])
         ok = c1.button("확인", type="primary", width="stretch")
         cancel = c2.button("취소", width="stretch")

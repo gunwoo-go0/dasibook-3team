@@ -40,6 +40,11 @@ def check_on_sale(df: pd.DataFrame, book_id: str) -> None:
         raise BookError(f"판매 상태가 '{status}'로 되어 있어 처리할 수 없습니다. books.csv를 확인하세요.")
 
 
+def confirm_message(book_id: str, title: str) -> str:
+    """확인 단계 문구에 처리할 도서를 붙인다. [확인]을 누르기 전에 어떤 책인지 다시 볼 수 있다(Issue #12)."""
+    return f"{book_id} · {title} 도서를 {MSG_CONFIRM}"
+
+
 def done_message(book_id: str, title: str) -> str:
     """처리한 도서를 붙인 완료 메시지. 처리 뒤 선택 상자가 다른 도서로 바뀌어도 무엇을 처리했는지 알 수 있다."""
     return f"{MSG_DONE} ({book_id} {title})"
