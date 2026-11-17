@@ -37,18 +37,32 @@ def find_terms(df: pd.DataFrame, question: str) -> list[tuple[str, str]]:
     return list(dict.fromkeys(terms))
 
 
-def find_books(df: pd.DataFrame, question: str) -> tuple[pd.DataFrame, list[tuple[str, str]]]:
-    """찾은 검색 조건마다 기존 검색 기능을 실행하고 결과를 합친다(같은 도서는 한 번만)."""
-    terms = find_terms(df, question)
-    parts = []
+def _by_field(terms: list[tuple[str, str]]) -> dict[str, list[str]]:
+    """검색 조건을 검색 기준별로 묶는다(질문에 나온 순서 유지)."""
+    groups: dict[str, list[str]] = {}
     for field, keyword in terms:
-        found = search_books(df, keyword, field)  # 기존 검색 기능(SF-03, SF-05) 그대로
-        if field != "title":
-            found = found[found[field].str.upper() == keyword]  # ID는 정확히 같은 것만
-        parts.append(found)
-    if not parts:
+        groups.setdefault(field, []).append(keyword)
+    return groups
+
+
+def find_books(df: pd.DataFrame, question: str) -> tuple[pd.DataFrame, list[tuple[str, str]]]:
+    """찾은 검색 조건마다 기존 검색 기능을 실행한다(같은 도서는 한 번만).
+    같은 기준끼리는 하나라도 맞으면 찾고('B001이랑 B002'), 기준이 다르면 모두 맞는 도서만 남긴다
+    ('C001의 파이썬 입문' → C001이 맡긴 파이썬 입문만, Issue #15)."""
+    terms = find_terms(df, question)
+    if not terms:
         return df.iloc[0:0].copy(), terms
-    return pd.concat(parts).drop_duplicates(subset="book_id"), terms
+    result = None
+    for field, keywords in _by_field(terms).items():
+        parts = []
+        for keyword in keywords:
+            found = search_books(df, keyword, field)  # 기존 검색 기능(SF-03, SF-05) 그대로
+            if field != "title":
+                found = found[found[field].str.upper() == keyword]  # ID는 정확히 같은 것만
+            parts.append(found)
+        hits = pd.concat(parts).drop_duplicates(subset="book_id")
+        result = hits if result is None else result[result["book_id"].isin(hits["book_id"])]
+    return result, terms
 
 
 def describe(found: pd.DataFrame, terms: list[tuple[str, str]]) -> str:
@@ -56,7 +70,8 @@ def describe(found: pd.DataFrame, terms: list[tuple[str, str]]) -> str:
     검색 조건이 없는 질문(규칙 질문 등)은 빈 글을 돌려주고, 이때는 질문만 모델에 보낸다."""
     if not terms:
         return ""
-    cond = ", ".join(f"{FIELD_NAMES[f]} '{k}'" for f, k in terms)
+    cond = " 그리고 ".join(" 또는 ".join(f"{FIELD_NAMES[f]} '{k}'" for k in keys)
+                         for f, keys in _by_field(terms).items())
     lines = [f"앱이 찾은 도서 (검색: {cond})"]
     if found.empty:
         lines.append("- 등록된 도서가 없습니다.")

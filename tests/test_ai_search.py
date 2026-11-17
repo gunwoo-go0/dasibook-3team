@@ -37,6 +37,26 @@ def test_전체_제목과_제목_단어를_함께_찾는다(books):
     assert ids(found) == ["B005", "B001", "B004"]
 
 
+def test_기준이_다르면_모두_맞는_도서만_찾는다(books):  # Issue #15
+    found, terms = find_books(books, "C001의 파이썬 입문 있어?")
+    assert terms == [("consignor_id", "C001"), ("title", "파이썬 입문")]
+    assert ids(found) == ["B001"]  # C002의 파이썬 입문(B004)과 C001의 다른 책은 빼야 한다
+    assert describe(found, terms).splitlines()[0] == "앱이 찾은 도서 (검색: 위탁자 ID 'C001' 그리고 도서명 '파이썬 입문')"
+    assert ids(find_books(books, "C002 파이썬 입문 팔렸어?")[0]) == ["B004"]
+
+
+def test_조건이_모두_맞는_도서가_없으면_찾은_도서_없음(books):  # Issue #15
+    found, terms = find_books(books, "C001의 데이터베이스 개론 있어?")  # B007은 C003이 맡긴 책
+    assert found.empty
+    assert "- 등록된 도서가 없습니다." in describe(found, terms)
+
+
+def test_같은_기준끼리는_하나라도_맞으면_찾는다(books):
+    found, terms = find_books(books, "B001이랑 B002 알려 줘")
+    assert ids(found) == ["B001", "B002"]
+    assert describe(found, terms).splitlines()[0] == "앱이 찾은 도서 (검색: 도서 ID 'B001' 또는 도서 ID 'B002')"
+
+
 def test_검색할_말이_없으면_검색하지_않는다(books):
     found, terms = find_books(books, "수수료율은 몇까지 돼?")
     assert terms == [] and found.empty
