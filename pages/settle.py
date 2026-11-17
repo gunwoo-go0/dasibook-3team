@@ -4,7 +4,7 @@ import streamlit as st
 
 from core.common import won
 from core.search import MSG_NO_BOOKS
-from core.settle import MSG_NO_SALES, consignors, settle
+from core.settle import MSG_NO_SALES, MSG_ROUNDING, consignors, settle
 from ui import load_data
 
 st.title("위탁자별 정산액 계산")
@@ -33,6 +33,7 @@ if submitted:
             "수수료율": f"{i['fee_rate']}%", "정산액": won(i["payout"]),
         } for i in result.items])
         st.dataframe(table, hide_index=True)
+        st.caption(MSG_ROUNDING)
         with st.container(border=True):
             left, right = st.columns(2, vertical_alignment="center")
             left.markdown(f"**판매완료 {result.count}권**")

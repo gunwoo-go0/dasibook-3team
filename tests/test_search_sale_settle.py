@@ -70,6 +70,7 @@ def test_도서_ID가_중복되면_판매_처리하지_않는다(books):  # Issu
 def test_정산액은_원_미만을_버린다():
     assert payout(9990, 15) == 8491  # 8,491.5원 → 8,491원
     assert payout(12000, 15) == 10200
+    assert payout(12345, 15) == 10493  # 10,493.25원 → 10,493원 (Issue #14 예시)
 
 
 def test_C001_정산(books):

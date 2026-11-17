@@ -6,6 +6,7 @@ import pandas as pd
 from core.common import SOLD, to_int
 
 MSG_NO_SALES = "판매완료 내역이 없습니다."  # 화면설계서 SCR-04 메시지
+MSG_ROUNDING = "정산액 = 판매 가격 × (100 − 수수료율) ÷ 100, 원 미만은 버립니다."  # Issue #14
 
 
 @dataclass
