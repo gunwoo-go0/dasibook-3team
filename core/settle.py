@@ -1,13 +1,12 @@
 """SF-08 정산 대상 조회, SF-09 정산액 계산, SF-10 정산 결과 값 (F-04 위탁자별 정산액 계산)."""
 from dataclasses import dataclass, field
-from decimal import Decimal
 
 import pandas as pd
 
 from core.common import SOLD, to_int, won
 
 MSG_NO_SALES = "판매완료 내역이 없습니다."  # 화면설계서 SCR-04 메시지
-MSG_ROUNDING = "정산액 = 판매 가격 × (100 − 수수료율) ÷ 100, 원 미만도 버리지 않고 소수점까지 표시합니다."  # Issue #14
+MSG_ROUNDING = "정산액 = 판매 가격 × (100 − 수수료율) ÷ 100, 원 미만은 버립니다."  # Issue #14
 TABLE_COLUMNS = ["도서 ID", "도서명", "판매 가격", "수수료율", "정산액"]
 
 
@@ -18,8 +17,8 @@ class Settlement:
     skipped: list[str] = field(default_factory=list)  # CSV 값이 잘못돼 계산에서 뺀 도서 ID
 
     @property
-    def total(self) -> Decimal:
-        return sum((i["payout"] for i in self.items), Decimal(0))
+    def total(self) -> int:
+        return sum(i["payout"] for i in self.items)
 
     @property
     def count(self) -> int:
@@ -31,10 +30,9 @@ def consignors(df: pd.DataFrame) -> list[str]:
     return sorted(x for x in df["consignor_id"].unique() if x)
 
 
-def payout(price: int, fee_rate: int) -> Decimal:
-    """SF-09: 판매 가격 × (100 − 수수료율) ÷ 100. 원 미만도 버리지 않는다(Issue #14, 12,345원·15% → 10,493.25원).
-    판매 가격과 수수료율이 정수라 결과는 소수 둘째 자리에서 끝나고, Decimal로 계산해 오차 없이 그대로 더한다."""
-    return Decimal(price * (100 - fee_rate)) / 100
+def payout(price: int, fee_rate: int) -> int:
+    """SF-09: 판매 가격 × (100 − 수수료율) ÷ 100. 정수 연산이라 소수 오차가 없고 원 미만은 버려진다."""
+    return price * (100 - fee_rate) // 100
 
 
 def settle(df: pd.DataFrame, consignor_id: str) -> Settlement:
