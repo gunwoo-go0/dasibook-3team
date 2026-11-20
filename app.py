@@ -17,5 +17,6 @@ page = st.navigation(pages)
 if st.session_state.get("current_page") != page.title:
     st.session_state["current_page"] = page.title
     st.session_state.pop("search", None)
+    st.session_state.pop("search_status", None)  # 판매 상태 필터도 전체로 되돌린다
 
 page.run()

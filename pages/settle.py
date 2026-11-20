@@ -1,10 +1,9 @@
 """SCR-04 위탁자별 정산 (F-04, SF-08 정산 대상 조회, SF-09 정산액 계산, SF-10 정산 결과 표시)."""
-import pandas as pd
 import streamlit as st
 
 from core.common import won
 from core.search import MSG_NO_BOOKS
-from core.settle import MSG_NO_SALES, consignors, settle
+from core.settle import MSG_NO_SALES, MSG_ROUNDING, consignors, settle, settlement_csv, settlement_table
 from ui import load_data
 
 st.title("위탁자별 정산액 계산")
@@ -28,12 +27,12 @@ if submitted:
         st.info(MSG_NO_SALES)  # ⑥ 안내 메시지
     else:
         # ③ 정산 내역 표 ④ 판매완료 권수 ⑤ 총정산액
-        table = pd.DataFrame([{
-            "도서 ID": i["book_id"], "도서명": i["title"], "판매 가격": won(i["price"]),
-            "수수료율": f"{i['fee_rate']}%", "정산액": won(i["payout"]),
-        } for i in result.items])
-        st.dataframe(table, hide_index=True)
+        st.dataframe(settlement_table(result), hide_index=True)
+        st.caption(MSG_ROUNDING)
         with st.container(border=True):
             left, right = st.columns(2, vertical_alignment="center")
             left.markdown(f"**판매완료 {result.count}권**")
             right.metric("총정산액", won(result.total))
+        # Issue #13: 조회한 위탁자의 정산 내역을 CSV로 보관. 내려받아도 화면이 다시 그려지지 않아 표가 그대로 남는다.
+        st.download_button("정산 내역 CSV 내려받기", settlement_csv(result), file_name=f"정산내역_{consignor_id}.csv",
+                           mime="text/csv", on_click="ignore")

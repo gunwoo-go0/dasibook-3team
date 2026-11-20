@@ -1,10 +1,15 @@
 """SF-03~SF-05 검색, SF-06·SF-07 판매 처리, SF-08~SF-10 정산 (F-02 ~ F-04)."""
+import csv
+import io
+
+import pandas as pd
 import pytest
 
 from core.common import SOLD, BookError
-from core.sale import MSG_ALREADY, MSG_NOT_FOUND, books_on_sale, done_message, mark_sold
-from core.search import search_books
-from core.settle import consignors, payout, settle
+from core.sale import (MSG_ALREADY, MSG_DUPLICATE, MSG_NOT_FOUND, books_on_sale, confirm_message, done_message,
+                       duplicate_ids, mark_sold)
+from core.search import filter_status, search_books
+from core.settle import consignors, payout, settle, settlement_csv, settlement_table
 
 
 def ids(df):
@@ -33,6 +38,13 @@ def test_검색_기준_위탁자_ID와_도서_ID(books):
     assert ids(search_books(books, "b003", "book_id")) == ["B003"]
 
 
+def test_검색_결과를_판매_상태로_거른다(books):  # Issue #11
+    found = search_books(books, "입문")
+    assert ids(filter_status(found)) == ["B001", "B004", "B005"]  # 기본값 전체
+    assert ids(filter_status(found, "판매중")) == ["B001", "B004"]
+    assert ids(filter_status(found, "판매완료")) == ["B005"]
+
+
 # --- 판매 상태 변경 ---------------------------------------------------------
 def test_판매중_도서만_고를_수_있다(books):
     assert ids(books_on_sale(books)) == ["B001", "B003", "B004", "B007"]
@@ -42,6 +54,10 @@ def test_판매완료_처리(books):
     new = mark_sold(books, "B003")
     assert new.loc[new["book_id"] == "B003", "status"].item() == SOLD
     assert books.loc[books["book_id"] == "B003", "status"].item() == "판매중"  # 원래 표는 그대로
+
+
+def test_확인_문구에_처리할_도서가_나온다():  # Issue #12
+    assert confirm_message("B001", "파이썬 입문") == "B001 · 파이썬 입문 도서를 판매완료로 변경할까요?"
 
 
 def test_완료_메시지에_처리한_도서가_나온다():  # Issue #1
@@ -55,10 +71,21 @@ def test_판매완료_도서와_없는_도서는_처리하지_않는다(books, b
     assert str(exc.value) == message
 
 
+def test_도서_ID가_중복되면_판매_처리하지_않는다(books):  # Issue #10
+    copy = books[books["book_id"] == "B001"].assign(title="중복 판매 검수본")
+    dup = pd.concat([books, copy], ignore_index=True)
+    assert duplicate_ids(dup) == ["B001"] and duplicate_ids(books) == []
+    with pytest.raises(BookError) as exc:
+        mark_sold(dup, "B001")
+    assert str(exc.value) == MSG_DUPLICATE.format(count=2)
+    assert list(dup.loc[dup["book_id"] == "B001", "status"]) == ["판매중", "판매중"]  # 두 줄 모두 그대로
+
+
 # --- 위탁자별 정산 ----------------------------------------------------------
 def test_정산액은_원_미만을_버린다():
     assert payout(9990, 15) == 8491  # 8,491.5원 → 8,491원
     assert payout(12000, 15) == 10200
+    assert payout(12345, 15) == 10493  # 10,493.25원 → 10,493원 (Issue #14 예시)
 
 
 def test_C001_정산(books):
@@ -71,6 +98,18 @@ def test_C002_정산(books):
     result = settle(books, "C002")
     assert [(i["book_id"], i["payout"]) for i in result.items] == [("B006", 9900), ("B008", 8491)]
     assert result.total == 18391
+
+
+def test_정산_내역_CSV는_화면_표와_같고_총정산액이_붙는다(books):  # Issue #13
+    result = settle(books, "C001")
+    data = settlement_csv(result)
+    assert data.startswith(b"\xef\xbb\xbf")  # 엑셀에서 한글이 깨지지 않게 utf-8-sig
+    rows = list(csv.reader(io.StringIO(data.decode("utf-8-sig"))))
+    assert rows[0] == ["도서 ID", "도서명", "판매 가격", "수수료율", "정산액"]
+    assert rows[1:3] == settlement_table(result).values.tolist()  # 화면 표와 같은 값
+    assert rows[1:] == [["B002", "데이터 구조", "12,000원", "15%", "10,200원"],
+                        ["B005", "통계 입문", "7,000원", "20%", "5,600원"],
+                        ["총정산액", "판매완료 2권", "", "", "15,800원"]]
 
 
 def test_판매완료가_없으면_내역_없음(books):
